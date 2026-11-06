@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Chess vs Robots</title>
+<style>
+:root {
+  --gold: #f6c85f;
+  --gold-light: #ffe59a;
+  --silver: #dce8e6;
+  --silver-bright: #ecf0f1;
+  --bg-dark: #080f13;
+  --panel-bg: rgba(13,25,31,.94);
+  --panel-border: #42616a;
+  --green-glow: #61e5b0;
+  --danger: #e74c3c;
+  --ice: #69e8ff;
+  --text-soft: #b9cbd0;
+}
+
+* { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(ellipse at 50% -12%, rgba(50,119,127,.32), transparent 48%),
+    radial-gradient(ellipse at 12% 80%, rgba(23,82,69,.18), transparent 40%),
+    linear-gradient(145deg, #101e24 0%, #081116 58%, #111c1e 100%);
+  background-attachment: fixed;
+  color: #eef5ef;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 14px 20px;
+  background: linear-gradient(145deg, rgba(19,39,46,.96), rgba(9,21,26,.96));
+  border: 1px solid rgba(128,183,177,.28);
+  border-radius: 18px;
+  box-shadow: 0 18px 44px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.07);
+}
+.brand {
+  font-weight: 900;
+  letter-spacing: 3px;
+  font-size: clamp(16px, 3vw, 22px);
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #fff4c7, #e8f4ee 55%, #8ce5d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.muted { color: #9eb8b9; font-size: 11px; font-weight: 600; }
+
+.panel {
+  background: linear-gradient(145deg, rgba(19,39,46,.96), rgba(9,21,26,.96));
+  border: 1px solid rgba(128,183,177,.28);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 14px 36px rgba(0,0,0,0.48), inset 0 1px rgba(255,255,255,.035);
+  backdrop-filter: blur(12px);
+}
+
+.screen { display: none; }
+.screen.active { display: block; animation: fadeIn 0.4s ease-out; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero {
+  min-height: 430px;
+  position: relative;
+  border-radius: 17px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 30px 20px;
+  background:
+    linear-gradient(180deg, rgba(5,15,20,.08), rgba(4,13,17,.88)),
+    radial-gradient(ellipse at 50% 30%, rgba(246,200,95,.22), transparent 26%),
+    radial-gradient(ellipse at 80% 65%, rgba(61,166,151,.25), transparent 38%),
+    linear-gradient(135deg, #294b4a, #172d32 52%, #101a20);
+  border: 1px solid rgba(224,201,131,.32);
+  box-shadow: inset 0 0 80px rgba(0,0,0,.3), 0 18px 55px rgba(0,0,0,.35);
+}
+
+.hero h1 {
+  font-size: clamp(34px, 6vw, 54px);
+  margin: 10px 0;
+  letter-spacing: 3px;
+  background: linear-gradient(#fff9e8, #e9d79d 60%, #b8c8bf);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+button {
+  border: 1px solid rgba(147,194,181,.34);
+  border-radius: 11px;
+  background: linear-gradient(145deg, #31575a, #19363b);
+  color: #fff;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 5px 14px rgba(0,0,0,0.32), inset 0 1px rgba(255,255,255,.08);
+}
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.16);
+  border-color: #e5cf8b;
+  box-shadow: 0 0 20px rgba(111,220,191,.15);
+}
+button:active:not(:disabled) { transform: translateY(0); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-silver {
+  background: linear-gradient(135deg, #fff0bd, #d6b968 55%, #a9853d);
+  color: #1b2827;
+  border: 1px solid #fff0bd;
+  box-shadow: 0 7px 24px rgba(207,173,91,.22);
+}
+.wide { width: 100%; }
+
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pill {
+  background: rgba(3,13,17,.7);
+  border: 1px solid rgba(154,194,184,.2);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#arena-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 10 / 5.2;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid #6e9585;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(92,171,130,.18), transparent 65%),
+    linear-gradient(135deg, #173b32, #102b2a 55%, #142b31);
+  box-shadow: 0 20px 48px rgba(0,0,0,.55), inset 0 0 35px rgba(0,0,0,.4);
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.cell {
+  position: relative;
+  border: none;
+  background: linear-gradient(135deg, rgba(65, 105, 70, .72), rgba(30, 57, 38, .82));
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s;
+  box-shadow: inset 0 0 0 1px rgba(214,255,220,.045), inset 0 -8px 16px rgba(0,0,0,.12);
+}
+.cell:nth-child(20n+1), .cell:nth-child(20n+3), .cell:nth-child(20n+5), .cell:nth-child(20n+7), .cell:nth-child(20n+9),
+.cell:nth-child(20n+12), .cell:nth-child(20n+14), .cell:nth-child(20n+16), .cell:nth-child(20n+18), .cell:nth-child(20n+20) {
+  background: linear-gradient(135deg, rgba(25, 51, 33, .94), rgba(38, 72, 45, .94));
+}
+.cell:hover { background: #2f4d38 !important; }
+
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.seedbar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+.seed {
+  padding: 10px 5px;
+  background: linear-gradient(155deg, rgba(23,48,52,.96), rgba(9,23,28,.96));
+  border: 1px solid rgba(122,174,162,.28);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  min-height: 100px;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+  position: relative;
+}
+.seed:hover { transform: translateY(-3px); }
+.seed.active {
+  border-color: #f4d782;
+  background: linear-gradient(145deg, rgba(180,151,76,.24), rgba(51,108,92,.28));
+  box-shadow: 0 0 0 1px rgba(246,216,133,.22), 0 0 22px rgba(246,200,95,.13);
+}
+.seed.locked {
+  opacity: 0.5;
+  filter: grayscale(0.8);
+}
+.seed svg { width: 38px; height: 38px; filter: drop-shadow(0 4px 5px rgba(0,0,0,0.55)); }
+.seed b { font-size: 12px; color: #f6f0d9; }
+.seed small { font-size: 11px; color: #d2dfd5; font-weight: bold; }
+
+.progress {
+  height: 12px;
+  background: #071317;
+  border-radius: 99px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #4dbb91, #c2e58b, #f5d47a);
+  box-shadow: 0 0 12px rgba(90, 230, 135, .38);
+  transition: width 0.3s linear;
+}
+
+#wave-banner {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  background: linear-gradient(120deg, #9c493c, #d77a48);
+  border: 1px solid #ffd29a;
+  color: #fff;
+  padding: 12px 28px;
+  border-radius: 30px;
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 2px;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#wave-banner.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 10, 14, 0.84);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.3s;
+}
+#overlay.show { display: flex; }
+.modal {
+  max-width: 380px;
+  width: 90%;
+  padding: 24px;
+  background: linear-gradient(145deg, #1d3b3d, #0d2028);
+  border: 1px solid #d4bd78;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+}
+
+.stage-list { display: grid; gap: 10px; }
+.diamond-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 13px; border-radius: 999px;
+  color: #b8f4ff; font-weight: 800;
+  background: rgba(20, 105, 127, .18);
+  border: 1px solid rgba(102, 219, 239, .42);
+}
+.cooldown-label { color: #9ed9e9; font-size: 10px; }
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+.shop-card {
+  background: linear-gradient(145deg, rgba(27,52,57,.9), rgba(11,27,32,.96));
+  border: 1px solid rgba(128,183,177,.25);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+.shop-card svg { width: 48px; height: 48px; }
+
+.stage-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 17px;
+  background: linear-gradient(145deg, rgba(27,52,57,.9), rgba(11,27,32,.96));
+  border: 1px solid rgba(128,183,177,.25);
+  border-radius: 13px;
+  text-align: left;
+  transition: transform .18s ease, border-color .18s ease;
+}
+.stage-card:hover { border-color: #d8c17c; box-shadow: 0 0 20px rgba(246,200,95,.1); }
+
+@media(max-width: 750px) {
+  #app { padding: 8px; }
+  .hero { min-height: 380px; }
+  #arena-container { aspect-ratio: 10 / 7; }
+  .seedbar { grid-template-columns: repeat(3, 1fr); }
+  .seed { min-height: 86px; }
+}
+</style>
+</head>
+<body>
+
+<main id="app">
+  <header>
+    <div>
+      <div class="brand">CHESS VS ROBOTS</div>
+      <div class="muted">ROYAL DEFENSE • STRATEGY WARFARE</div>
+    </div>
+    <div class="pill">⚙ 5 × 10 BATTLEFIELD</div>
+  </header>
+
+  <!-- LOBBY SCREEN -->
+  <section id="lobby" class="screen active panel">
+    <div class="hero">
+      <div class="muted" style="letter-spacing: 3px; margin-bottom: 5px;">THE LAST KINGDOM</div>
+      <h1>CHESS VS ROBOTS</h1>
+      <p style="max-width: 440px; color: #b0c4b4; font-size: 14px; line-height: 1.5; margin-bottom: 25px;">
+        Bangun formasi pertahanan kerajaan, kumpulkan koin, dan tahan gelombang mesin penjajah di medan perang yang terus memanas.
+      </p>
+      <div class="row" style="justify-content:center; gap:10px; flex-wrap:wrap; margin-top:8px;">
+        <button class="btn-silver" id="play" style="min-width:200px; padding:14px;">MASUK KE MEDAN PERANG ➜</button>
+        <button id="open-shop" style="min-width:130px; padding:14px;">💎 CS (Shop)</button>
+        <button id="open-reset" style="min-width:130px; padding:14px; background: linear-gradient(145deg, #78281f, #c0392b); border-color: #e74c3c;">🔄 Reset Progres</button>
+      </div>
+      <div class="diamond-pill" style="margin-top:16px;">💎 <span id="lobby-diamonds">0</span> Diamond</div>
+    </div>
+  </section>
+
+  <!-- STAGE SELECT SCREEN -->
+  <section id="stages" class="screen panel">
+    <h2 style="margin: 0 0 6px;">Pilih Wilayah Pertempuran</h2>
+    <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
+      <p class="muted" style="margin:0;">Selesaikan setiap wilayah untuk membuka tantangan berikutnya.</p>
+      <div class="diamond-pill">💎 <span id="stage-diamonds">0</span> Diamond</div>
+    </div>
+    <div id="stage-list" class="stage-list"></div>
+    <button class="wide" id="back" style="margin-top: 15px;">← Kembali ke Lobby</button>
+  </section>
+
+  <!-- SHOP SCREEN -->
+  <section id="shop" class="screen panel">
+    <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:18px;">
+      <h2 style="margin:0;">💎 CS (Shop)</h2>
+      <div class="diamond-pill">💎 <span id="shop-diamonds">0</span> Diamond</div>
+    </div>
+    <div class="shop-grid">
+      <!-- Item 1: Pion Es -->
+      <div class="shop-card">
+        <svg viewBox="0 0 64 64"><circle cx="32" cy="16" r="10" fill="#b8f4fa" stroke="#2c7885" stroke-width="2"/><path d="M21 28Q32 22 43 28L48 54Q32 60 16 54Z" fill="#a8eaf2" stroke="#2c7885" stroke-width="2"/><path d="M17 53H47" stroke="#2c7885" stroke-width="4"/><path d="M32 32V49M24 39L40 39" stroke="#ffffff" stroke-width="2"/></svg>
+        <b style="color:#fff;">Pion Es</b>
+        <div class="muted">Tembakan membekukan musuh & memperlambat gerak. (Damage: 25)</div>
+        <button id="buy-ice" class="btn-silver wide" style="margin-top:8px;">Beli 💎 60</button>
+      </div>
+
+      <!-- Item 2: Bishop -->
+      <div class="shop-card">
+        <svg viewBox="0 0 64 64"><path d="M32 8 C22 18, 20 28, 25 38 L20 44 L44 44 L39 38 C44 28, 42 18, 32 8 Z" fill="#9b59b6" stroke="#4a235a" stroke-width="2"/><path d="M17 53H47 M22 44H42" stroke="#4a235a" stroke-width="3"/><circle cx="32" cy="8" r="3" fill="#f1c40f"/><line x1="26" y1="22" x2="38" y2="22" stroke="#4a235a" stroke-width="2"/></svg>
+        <b style="color:#fff;">Bishop</b>
+        <div class="muted">Tembakan Shotgun jarak dekat (3 petak). Damage: 70 per 3 detik.</div>
+        <button id="buy-bishop" class="btn-silver wide" style="margin-top:8px;">Beli 💎 20</button>
+      </div>
+    </div>
+    <button class="wide" id="shop-back" style="margin-top:20px;">← Kembali</button>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="game" class="screen">
+    <div id="hud" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <div>
+        <b id="stage-name" style="font-size: 16px; color: #fff;">Stage 1: A Fallen Kingdom</b>
+        <div class="muted" id="stage-desc">Gelombang Invasi Robot</div>
+      </div>
+      <div class="row">
+        <div class="pill" style="color: var(--silver-bright);">🪙 <b id="coins">50</b></div>
+        <div class="diamond-pill">💎 <b id="game-diamonds">0</b></div>
+        <div class="pill" style="color: var(--gold-light);"><b id="wave-num">WAVE 1/2</b></div>
+        <div class="pill">⏱ <b id="timer">120s</b></div>
+      </div>
+    </div>
+
+    <!-- MAIN BATTLEFIELD -->
+    <div id="arena-container">
+      <div id="board"></div>
+      <canvas id="game-canvas"></canvas>
+      <div id="wave-banner">WAVE 2 DIMULAI!</div>
+    </div>
+
+    <!-- CONTROLS & SEEDBAR -->
+    <div class="panel" style="margin-top: 10px; padding: 12px;">
+      <div class="row" style="justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 6px;">
+        <span>PILIH BIDAK PERTAHANAN</span>
+        <span id="notice" style="color: var(--silver-bright); font-weight: normal;"></span>
+      </div>
+      <div class="seedbar">
+        <button class="seed active" data-type="pawn">
+          <svg viewBox="0 0 64 64"><circle cx="32" cy="16" r="10" fill="#e8e4d2" stroke="#4a4031" stroke-width="2"/><path d="M21 28 Q32 22 43 28 L48 54 Q32 60 16 54Z" fill="#e8e4d2" stroke="#4a4031" stroke-width="2"/><path d="M17 53H47" stroke="#4a4031" stroke-width="4"/></svg>
+          <b>Pion</b><small>🪙 100</small><small class="cooldown-label" id="cooldown-pawn">Siap</small>
+        </button>
+        <button class="seed" data-type="queen">
+          <svg viewBox="0 0 64 64"><path d="M13 18L20 42H44L51 18L42 25L32 9L22 25Z" fill="#f0ce68" stroke="#5c411a" stroke-width="2"/><path d="M20 43H44L48 55H16Z" fill="#e8d7a3" stroke="#5c411a" stroke-width="2"/><circle cx="13" cy="15" r="4" fill="#f6e7a5"/><circle cx="32" cy="7" r="4" fill="#f6e7a5"/><circle cx="51" cy="15" r="4" fill="#f6e7a5"/></svg>
+          <b>Menteri</b><small>🪙 50</small><small class="cooldown-label" id="cooldown-queen">Siap</small>
+        </button>
+        <button class="seed" data-type="rook">
+          <svg viewBox="0 0 64 64"><path d="M15 10H24V18H29V10H37V18H42V10H50V27L45 34V53H19V34L15 27Z" fill="#d5d2c4" stroke="#4a4335" stroke-width="2"/><path d="M14 53H50V59H14Z" fill="#8a8575"/></svg>
+          <b>Benteng</b><small>🪙 75</small><small class="cooldown-label" id="cooldown-rook">Siap</small>
+        </button>
+        <button class="seed" data-type="bomb">
+          <svg viewBox="0 0 64 64"><circle cx="32" cy="38" r="18" fill="#2c3e50" stroke="#111" stroke-width="2"/><path d="M26 18 Q32 10 40 12" fill="none" stroke="#e67e22" stroke-width="3" stroke-linecap="round"/><circle cx="41" cy="11" r="3" fill="#f1c40f"/><circle cx="32" cy="28" r="8" fill="#e74c3c"/><path d="M25 40 Q32 32 39 40 L43 56 Q32 60 21 56Z" fill="#34495e"/></svg>
+          <b>Pion Bom</b><small>🪙 100</small><small class="cooldown-label" id="cooldown-bomb">Siap</small>
+        </button>
+        <button class="seed" data-type="ice" id="seed-ice">
+          <svg viewBox="0 0 64 64"><circle cx="32" cy="16" r="10" fill="#b8f4fa" stroke="#2c7885" stroke-width="2"/><path d="M21 28Q32 22 43 28L48 54Q32 60 16 54Z" fill="#a8eaf2" stroke="#2c7885" stroke-width="2"/><path d="M17 53H47" stroke="#2c7885" stroke-width="4"/><path d="M32 32V49M24 39L40 39" stroke="#ffffff" stroke-width="2"/></svg>
+          <b>Pion Es</b><small>🪙 175</small><small class="cooldown-label" id="cooldown-ice">Siap</small>
+        </button>
+        <button class="seed" data-type="bishop" id="seed-bishop">
+          <svg viewBox="0 0 64 64"><path d="M32 8 C22 18, 20 28, 25 38 L20 44 L44 44 L39 38 C44 28, 42 18, 32 8 Z" fill="#9b59b6" stroke="#4a235a" stroke-width="2"/><path d="M17 53H47 M22 44H42" stroke="#4a235a" stroke-width="3"/><circle cx="32" cy="8" r="3" fill="#f1c40f"/><line x1="26" y1="22" x2="38" y2="22" stroke="#4a235a" stroke-width="2"/></svg>
+          <b>Bishop</b><small>🪙 125</small><small class="cooldown-label" id="cooldown-bishop">Siap</small>
+        </button>
+      </div>
+    </div>
+
+    <!-- WAVE PROGRESS & ACTIONS -->
+    <div class="row" style="margin-top: 10px;">
+      <div class="panel" style="flex: 1; padding: 10px 14px;">
+        <div class="row" style="justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+          <span>PROGRESS STAGE</span>
+          <b id="stage-progress-txt">WAVE 1</b>
+        </div>
+        <div class="progress"><div id="bar" class="progress-bar"></div></div>
+      </div>
+      <button id="pause" style="min-width: 80px;">Ⅱ Jeda</button>
+      <button id="exit">Keluar</button>
+    </div>
+
+    <!-- RESULT MODAL -->
+    <div id="overlay">
+      <div class="modal">
+        <div id="result-icon" style="font-size: 50px; margin-bottom: 10px;">♛</div>
+        <h2 id="result-title" style="margin: 0 0 8px; color: #fff;">VICTORY!</h2>
+        <p id="result-desc" class="muted" style="margin-bottom: 20px;"></p>
+        <button class="btn-silver wide" id="next">Stage Berikutnya ➜</button>
+        <button class="wide" id="retry" style="margin-top: 8px;">Ulangi</button>
+        <button class="wide" id="home" style="margin-top: 8px;">Lobby</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESET CONFIRMATION MODAL (Diletakkan di tingkat terluar agar selalu bisa muncul) -->
+  <div id="reset-overlay" style="position: fixed; inset: 0; background: rgba(5, 10, 7, 0.88); display: none; align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(8px); animation: fadeIn 0.3s;">
+    <div class="modal" style="max-width: 400px; text-align: center;">
+      <div style="font-size: 45px; margin-bottom: 10px;">⚠️</div>
+      <h2 style="margin: 0 0 10px; color: #e74c3c;">RESET PROGRES?</h2>
+      <p class="muted" style="margin-bottom: 20px; line-height: 1.5; color: #cbd5e1;">
+        Tindakan ini akan menghapus seluruh data permainan: Diamond, stage yang terbuka, item shop yang terbeli, dan progres kembali ke awal.
+      </p>
+      <div class="row" style="justify-content: center; gap: 10px;">
+        <button id="confirm-reset" style="background: #e74c3c; border-color: #c0392b; flex: 1; padding: 12px;">Ya, Reset</button>
+        <button id="cancel-reset" style="flex: 1; padding: 12px;" class="btn-silver">Batal</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const canvas = $('game-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  const WAVE_DURATION = 120;
+
+  const stages = [
+    { name: 'A Fallen Kingdom', w1: { count: 1, minInt: 13, maxInt: 15 }, w2: { count: 2, minInt: 10, maxInt: 12 }, hpBase: 100, reward: 10 },
+    { name: 'Jungle', w1: { count: 1, minInt: 11, maxInt: 14 }, w2: { count: 2, minInt: 9, maxInt: 11 }, hpBase: 130, reward: 10 },
+    { name: 'Jungle 2', w1: { count: 1, minInt: 10, maxInt: 13 }, w2: { count: 3, minInt: 8, maxInt: 10 }, hpBase: 160, reward: 10 },
+    { name: 'Ruins', w1: { count: 1, minInt: 9, maxInt: 12 }, w2: { count: 3, minInt: 7, maxInt: 9 }, hpBase: 200, reward: 10 }
+  ];
+  
+  const costs = { pawn: 100, queen: 50, rook: 75, ice: 175, bomb: 100, bishop: 125 };
+  const spawnCooldowns = { pawn: 6, queen: 4, rook: 10, ice: 10, bomb: 15, bishop: 8 };
+  const cooldownLeft = { pawn: 0, queen: 0, rook: 0, ice: 0, bomb: 0, bishop: 0 };
+  
+  let diamonds = Number(localStorage.getItem('chessVsRobotsDiamonds') || 0);
+  if (!Number.isFinite(diamonds) || diamonds < 0) diamonds = 0;
+
+  let unlockedItems = [];
+  try {
+    unlockedItems = JSON.parse(localStorage.getItem('chessVsRobotsUnlockedItems') || '[]');
+  } catch(e) { unlockedItems = []; }
+
+  let completedStages = [];
+  try {
+    completedStages = JSON.parse(localStorage.getItem('chessVsRobotsCompletedStages') || '[]');
+  } catch (err) { completedStages = []; }
+
+  function getUnlockedMax() {
+    if (!completedStages.length) return 1;
+    let maxCompleted = Math.max(...completedStages.map(Number));
+    return Math.min(4, maxCompleted + 1);
+  }
+
+  let unlocked = getUnlockedMax();
+
+  function saveGameData() {
+    localStorage.setItem('chessVsRobotsDiamonds', diamonds);
+    localStorage.setItem('chessVsRobotsCompletedStages', JSON.stringify(completedStages));
+    localStorage.setItem('chessVsRobotsUnlockedItems', JSON.stringify(unlockedItems));
+  }
+
+  function updateDiamondDisplays() {
+    ['lobby-diamonds', 'stage-diamonds', 'shop-diamonds', 'game-diamonds'].forEach(id => {
+      if ($(id)) $(id).textContent = diamonds;
+    });
+    updateShopUI();
+    updateSeedbarUI();
+  }
+
+  function updateShopUI() {
+    const buyIceBtn = $('buy-ice');
+    if (buyIceBtn) {
+      if (unlockedItems.includes('ice')) {
+        buyIceBtn.textContent = 'Terbeli ✓';
+        buyIceBtn.disabled = true;
+      } else {
+        buyIceBtn.textContent = 'Beli 💎 60';
+        buyIceBtn.disabled = diamonds < 60;
+      }
+    }
+
+    const buyBishopBtn = $('buy-bishop');
+    if (buyBishopBtn) {
+      if (unlockedItems.includes('bishop')) {
+        buyBishopBtn.textContent = 'Terbeli ✓';
+        buyBishopBtn.disabled = true;
+      } else {
+        buyBishopBtn.textContent = 'Beli 💎 20';
+        buyBishopBtn.disabled = diamonds < 20;
+      }
+    }
+  }
+
+  function updateSeedbarUI() {
+    const iceBtn = $('seed-ice');
+    if (iceBtn) {
+      iceBtn.classList.toggle('locked', !unlockedItems.includes('ice'));
+    }
+    const bishopBtn = $('seed-bishop');
+    if (bishopBtn) {
+      bishopBtn.classList.toggle('locked', !unlockedItems.includes('bishop'));
+    }
+  }
+
+  function updateCooldownDisplays() {
+    Object.keys(spawnCooldowns).forEach(type => {
+      const label = $('cooldown-' + type);
+      if (label) label.textContent = cooldownLeft[type] > 0
+        ? `⏳ ${cooldownLeft[type].toFixed(1)}s`
+        : 'Siap';
+    });
+  }
+  
+  let currentStage = 0, selected = 'pawn', coins = 50;
+  let units = [], enemies = [], projectiles = [], particles = [], droppedCoins = [];
+  let currentWave = 1, waveTime = 0, spawnTimer = 0, nextSpawnInterval = 0;
+  let last = 0, raf = 0, active = false, paused = false, ended = false, animTime = 0;
+
+  function getRandomInterval(min, max) {
+    return Math.random() * (max - min) + min;
+  }
+
+  function resizeCanvas() {
+    const container = $('arena-container');
+    if (!container) return;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  function showScreen(id) {
+    ['lobby', 'stages', 'shop', 'game'].forEach(x => $(x).classList.toggle('active', x === id));
+    if (id === 'game') setTimeout(resizeCanvas, 50);
+  }
+
+  function initBoard() {
+    const board = $('board');
+    board.innerHTML = '';
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 10; c++) {
+        let cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.r = r; cell.dataset.c = c;
+        board.appendChild(cell);
+      }
+    }
+  }
+
+  function triggerBombExplosion(r, c, cellW, cellH) {
+    let centerX = (c + 0.5) * cellW;
+    let centerY = (r + 0.5) * cellH;
+
+    enemies.forEach(e => {
+      let enemyCellC = Math.floor(e.x / cellW);
+      if (Math.abs(e.r - r) <= 1 && Math.abs(enemyCellC - c) <= 1) {
+        e.hp -= 200;
+      }
+    });
+
+    for (let i = 0; i < 35; i++) {
+      let angle = Math.random() * Math.PI * 2;
+      let speed = 50 + Math.random() * 200;
+      particles.push({
+        x: centerX,
+        y: centerY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.6,
+        color: Math.random() < 0.5 ? '#e74c3c' : '#f1c40f'
+      });
+    }
+  }
+
+  function handleCanvasClick(e) {
+    if (!active || paused || ended) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    // 1. Cek Klik Koin
+    for (let i = droppedCoins.length - 1; i >= 0; i--) {
+      let coin = droppedCoins[i];
+      let dist = Math.hypot(clickX - coin.x, clickY - coin.y);
+      if (dist < 28) {
+        coins += 25;
+        $('coins').textContent = coins;
+        particles.push({
+          x: coin.x, y: coin.y, vy: -30, life: 0.8, color: '#ecf0f1', text: '+25 🪙'
+        });
+        droppedCoins.splice(i, 1);
+        say('Koin Perak dikumpulkan! (+25)');
+        return;
+      }
+    }
+
+    // 2. Cek Penempatan Bidak di Grid
+    let cellW = canvas.width / 10;
+    let cellH = canvas.height / 5;
+    let c = Math.floor(clickX / cellW);
+    let r = Math.floor(clickY / cellH);
+
+    if (r >= 0 && r < 5 && c >= 0 && c < 10) {
+      if ((selected === 'ice' && !unlockedItems.includes('ice')) || (selected === 'bishop' && !unlockedItems.includes('bishop'))) {
+        say('Bidak ini masih terkunci! Beli di Shop.');
+        return;
+      }
+
+      if (units.some(u => u.r === r && u.c === c)) {
+        say('Petak sudah ditempati!');
+        return;
+      }
+      if (cooldownLeft[selected] > 0) {
+        say(`Bidak ${selected.toUpperCase()} cooldown ${cooldownLeft[selected].toFixed(1)}s lagi.`);
+        return;
+      }
+      if (coins < costs[selected]) {
+        say('Koin Perak tidak cukup!');
+        return;
+      }
+
+      coins -= costs[selected];
+      cooldownLeft[selected] = spawnCooldowns[selected];
+      updateCooldownDisplays();
+      let maxHp = selected === 'rook' ? 700 : 100;
+
+      if (selected === 'bomb') {
+        triggerBombExplosion(r, c, cellW, cellH);
+        say('BOOM! Pion Bom meledak!');
+      } else {
+        units.push({
+          r, c, type: selected, hp: maxHp, maxHp, clock: 0, scale: 0,
+          queenNextCoinTimer: getRandomInterval(4, 6)
+        });
+        say('Bidak ' + selected.toUpperCase() + ' dipasang.');
+      }
+      
+      $('coins').textContent = coins;
+    }
+  }
+
+  canvas.addEventListener('click', handleCanvasClick);
+
+  function say(txt) { $('notice').textContent = txt; }
+
+  function renderStages() {
+    unlocked = getUnlockedMax();
+    $('stage-list').innerHTML = stages.map((s, i) => `
+      <div class="stage-card">
+        <div>
+          <b style="color:#fff;">STAGE ${i+1}: ${s.name}</b>
+          <div class="muted">Hadiah Pertama Clear: 💎 ${s.reward} Diamond</div>
+        </div>
+        <button class="${i < unlocked ? 'btn-silver' : ''}" ${i < unlocked ? '' : 'disabled'} onclick="window.startGame(${i})">
+          ${i < unlocked ? 'Main ➔' : '🔒'}
+        </button>
+      </div>
+    `).join('');
+  }
+
+  window.startGame = (n) => {
+    currentStage = n; coins = 50; units = []; enemies = []; projectiles = []; particles = []; droppedCoins = [];
+    Object.keys(cooldownLeft).forEach(type => cooldownLeft[type] = 0);
+    updateDiamondDisplays();
+    updateCooldownDisplays();
+    currentWave = 1; waveTime = 0; spawnTimer = 0;
+    active = true; paused = false; ended = false; selected = 'pawn';
+    
+    let stg = stages[n];
+    nextSpawnInterval = getRandomInterval(stg.w1.minInt, stg.w1.maxInt);
+
+    $('stage-name').textContent = `Stage ${n+1}: ${stg.name}`;
+    $('stage-desc').textContent = `Invasi Robot Berlangsung`;
+    $('coins').textContent = coins;
+    $('wave-num').textContent = `WAVE 1/2`;
+    $('timer').textContent = `${WAVE_DURATION}s`;
+    $('pause').textContent = 'Ⅱ Jeda';
+    $('overlay').classList.remove('show');
+    
+    document.querySelectorAll('.seed').forEach(b => b.classList.toggle('active', b.dataset.type === 'pawn'));
+    
+    initBoard();
+    showScreen('game');
+
+    last = performance.now();
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(gameLoop);
+    say('Siapkan pertahanan caturmu! (Tekan [P] untuk instant win)');
+  };
+
+  function spawnEnemies(count) {
+    let stg = stages[currentStage];
+    for (let i = 0; i < count; i++) {
+      let r = Math.floor(Math.random() * 5);
+      let isTough = currentStage > 0 && Math.random() < (currentStage === 3 ? 0.45 : 0.25);
+      let hp = isTough ? 250 : stg.hpBase;
+      
+      enemies.push({
+        r,
+        x: canvas.width + 25,
+        hp, maxHp: hp,
+        speed: (isTough ? 20 : 28) * 0.7,
+        slow: 0, attackClock: 0,
+        isTough,
+        bobOffset: Math.random() * 100
+      });
+    }
+  }
+
+  function finishGame(win) {
+    ended = true; active = false;
+    cancelAnimationFrame(raf);
+    
+    $('result-icon').textContent = win ? '♚' : '☠';
+    $('result-title').textContent = win ? 'VICTORY!' : 'PERTAHANAN JEBOL';
+    
+    let rewardMsg = '';
+    if (win) {
+      const stageKey = currentStage + 1;
+      const isFirstClear = !completedStages.includes(stageKey);
+      
+      if (isFirstClear) {
+        completedStages.push(stageKey);
+        const earnedDiamonds = stages[currentStage].reward;
+        diamonds += earnedDiamonds;
+        saveGameData();
+        updateDiamondDisplays();
+        rewardMsg = ` Selamat! Kamu mendapatkan +${earnedDiamonds} Diamond 💎 (Bonus Pertama Menang!)`;
+      } else {
+        rewardMsg = ` (Stage sudah pernah diselesaikan - Tidak ada bonus Diamond)`;
+      }
+    }
+
+    $('result-desc').textContent = win 
+      ? `Kerajaan Selamat! Stage ${currentStage + 1} (${stages[currentStage].name}) berhasil diselesaikan.${rewardMsg}` 
+      : 'Robot menembus pertahanan kerajaan. Coba susun strategi baru!';
+      
+    $('next').style.display = (win && currentStage < 3) ? 'block' : 'none';
+    if (win) unlocked = getUnlockedMax();
+    
+    $('overlay').classList.add('show');
+  }
+
+  function showWave2Banner() {
+    const banner = $('wave-banner');
+    banner.classList.add('show');
+    setTimeout(() => banner.classList.remove('show'), 2500);
+  }
+
+  function drawPiece(type, x, y, size, scale = 1, isIce = false) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    const k = Math.max(22, Math.min(42, size * 0.72));
+    const ice = type === 'ice';
+    const metal = ice ? '#b9f5ff' : type === 'bishop' ? '#c49aff' : type === 'queen' ? '#f5d77c' : '#e5e9df';
+    const dark = ice ? '#267d91' : type === 'bishop' ? '#563b83' : type === 'queen' ? '#805c24' : '#52645e';
+    
+    ctx.fillStyle='rgba(0,0,0,.34)';
+    ctx.beginPath();ctx.ellipse(0,k*.38,k*.43,k*.14,0,0,Math.PI*2);ctx.fill();
+    let grad=ctx.createLinearGradient(-k*.4,-k*.2,k*.4,k*.4);
+    grad.addColorStop(0,metal);grad.addColorStop(.55,dark);grad.addColorStop(1,'#182b30');
+    ctx.fillStyle=grad;ctx.strokeStyle='rgba(245,246,222,.8)';ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.ellipse(0,k*.24,k*.37,k*.14,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle=grad;ctx.beginPath();
+    ctx.moveTo(-k*.28,k*.22);ctx.lineTo(-k*.2,-k*.08);ctx.quadraticCurveTo(0,-k*.2,k*.2,-k*.08);
+    ctx.lineTo(k*.28,k*.22);ctx.quadraticCurveTo(0,k*.34,-k*.28,k*.22);ctx.fill();ctx.stroke();
+    ctx.shadowColor=ice?'#53eaff':type==='bishop'?'#b98aff':'rgba(255,220,130,.45)';
+    ctx.shadowBlur=ice?12:6;
+    if(type==='pawn'||ice){
+      ctx.fillStyle=grad;ctx.beginPath();ctx.arc(0,-k*.28,k*.17,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-k*.16,-k*.1);ctx.quadraticCurveTo(0,-k*.2,k*.16,-k*.1);ctx.lineTo(k*.22,k*.19);ctx.lineTo(-k*.22,k*.19);ctx.closePath();ctx.fill();ctx.stroke();
+      if(ice){ctx.strokeStyle='#eaffff';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,-k*.04);ctx.lineTo(0,k*.14);ctx.moveTo(-k*.09,k*.04);ctx.lineTo(k*.09,k*.04);ctx.stroke();}
+      else {ctx.fillStyle='#fff6d7';ctx.beginPath();ctx.arc(-k*.05,-k*.31,k*.035,0,Math.PI*2);ctx.fill();}
+    } else if(type==='queen'){
+      ctx.fillStyle=grad;ctx.beginPath();ctx.moveTo(-k*.28,k*.12);ctx.lineTo(-k*.35,-k*.24);ctx.lineTo(-k*.15,-k*.12);ctx.lineTo(0,-k*.38);ctx.lineTo(k*.15,-k*.12);ctx.lineTo(k*.35,-k*.24);ctx.lineTo(k*.28,k*.12);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#fff0b1';[-.35,0,.35].forEach((v,i)=>{ctx.beginPath();ctx.arc(k*v,-k*(i===1?.39:.25),k*.055,0,Math.PI*2);ctx.fill();});
+      ctx.fillStyle='#8c6223';ctx.fillRect(-k*.23,k*.13,k*.46,k*.055);
+    } else if(type==='rook'){
+      ctx.fillStyle=grad;ctx.beginPath();ctx.roundRect(-k*.27,-k*.23,k*.54,k*.42,3);ctx.fill();ctx.stroke();
+      ctx.fillStyle=metal;for(let i=0;i<3;i++)ctx.fillRect(-k*.29+i*k*.2,-k*.32,k*.12,k*.12);
+      ctx.fillStyle='rgba(18,38,40,.7)';ctx.fillRect(-k*.13,-k*.12,k*.26,k*.2);
+      ctx.strokeStyle=metal;ctx.lineWidth=1.2;ctx.strokeRect(-k*.13,-k*.12,k*.26,k*.2);
+    } else if(type==='bishop'){
+      ctx.fillStyle=grad;ctx.beginPath();ctx.moveTo(0,-k*.42);ctx.quadraticCurveTo(k*.36,-k*.12,k*.22,k*.14);ctx.lineTo(-k*.22,k*.14);ctx.quadraticCurveTo(-k*.36,-k*.12,0,-k*.42);ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#f1dcff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-k*.09,-k*.22);ctx.lineTo(k*.09,-k*.04);ctx.stroke();
+      ctx.fillStyle='#f7e6a0';ctx.beginPath();ctx.arc(0,-k*.43,k*.055,0,Math.PI*2);ctx.fill();
+    } else if(type==='bomb'){
+      ctx.fillStyle='#2c3d47';ctx.beginPath();ctx.arc(0,-k*.05,k*.25,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#ffb34f';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(k*.12,-k*.27);ctx.quadraticCurveTo(k*.28,-k*.45,k*.34,-k*.34);ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawRobot(e, cellH) {
+    const y=e.r*cellH+cellH/2+Math.sin(animTime*5+e.bobOffset)*2.2, x=e.x;
+    const s=Math.max(.82,Math.min(1.15,cellH/58));
+    ctx.save();ctx.translate(x,y);ctx.scale(s,s);
+    const tough=e.isTough, frozen=e.slow>0;
+    ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=9;ctx.shadowOffsetY=4;
+    
+    ctx.fillStyle=tough?'#273b47':'#344d58';
+    ctx.fillRect(-11,8,8,11);ctx.fillRect(4,8,8,11);
+    ctx.fillStyle='#17272e';ctx.fillRect(-14,17,12,4);ctx.fillRect(3,17,12,4);
+    
+    let body=ctx.createLinearGradient(-14,-10,14,13);
+    body.addColorStop(0,frozen?'#c8fbff':tough?'#a7b7c0':'#6f8d99');
+    body.addColorStop(.5,frozen?'#43b9d1':tough?'#596d7b':'#304b5a');
+    body.addColorStop(1,'#172b35');
+    ctx.fillStyle=body;ctx.strokeStyle=tough?'#c2d0d3':'#7897a0';ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.roundRect(-14,-10,28,23,5);ctx.fill();ctx.stroke();
+    
+    ctx.fillStyle=frozen?'#eaffff':tough?'#e1a84e':'#ef655c';
+    ctx.shadowColor=frozen?'#6df5ff':tough?'#f6b84e':'#ff514a';ctx.shadowBlur=8;
+    ctx.beginPath();ctx.arc(0,1,tough?5:4,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    
+    ctx.fillStyle=tough?'#647d88':'#45616c';ctx.fillRect(-19,-7,5,17);ctx.fillRect(14,-7,5,17);
+    ctx.fillStyle='#263b45';ctx.fillRect(-20,7,7,5);ctx.fillRect(13,7,7,5);
+    
+    ctx.fillStyle=tough?'#9eafb8':'#58717d';ctx.beginPath();ctx.roundRect(-11,-27,22,17,5);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#172a34';ctx.fillRect(-8,-23,16,7);
+    ctx.fillStyle=frozen?'#eaffff':tough?'#ffc75e':'#ff6d61';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=7;
+    ctx.fillRect(-6,-21,4,3);ctx.fillRect(2,-21,4,3);ctx.shadowBlur=0;
+    ctx.strokeStyle=tough?'#e4b65e':'#9dbbc1';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,-27);ctx.lineTo(2,-32);ctx.stroke();
+    ctx.fillStyle='#f6d47a';ctx.beginPath();ctx.arc(2,-33,2,0,Math.PI*2);ctx.fill();
+    
+    ctx.shadowBlur=0;ctx.fillStyle='rgba(0,0,0,.8)';ctx.beginPath();ctx.roundRect(-18,-39,36,5,2);ctx.fill();
+    ctx.fillStyle=frozen?'#55eaff':e.hp/e.maxHp<.3?'#ef6d62':'#77df9c';
+    ctx.beginPath();ctx.roundRect(-17,-38,34*Math.max(0,e.hp/e.maxHp),3,1.5);ctx.fill();
+    if(tough){ctx.strokeStyle='#f2c76d';ctx.lineWidth=1;ctx.strokeRect(-21,-31,42,52);}
+    ctx.restore();
+  }
+
+  function drawCoin(coin) {
+    ctx.save();
+    ctx.translate(coin.x, coin.y);
+    ctx.fillStyle = '#bdc3c7';
+    ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ecf0f1';
+    ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+    
+    let progress = coin.life / 4.0;
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 15, -Math.PI/2, (-Math.PI/2) + (Math.PI * 2 * progress));
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function updateAndRender(dt) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let cellW = canvas.width / 10;
+    let cellH = canvas.height / 5;
+
+    // 1. Render Units
+    units.forEach(u => {
+      u.clock += dt;
+      if (u.scale < 1) u.scale = Math.min(1, u.scale + dt * 4);
+      
+      if (u.type === 'queen') {
+        if (!u.queenNextCoinTimer) u.queenNextCoinTimer = getRandomInterval(4, 6);
+        if (u.clock >= u.queenNextCoinTimer) {
+          u.clock = 0;
+          u.queenNextCoinTimer = getRandomInterval(4, 6);
+          droppedCoins.push({
+            x: (u.c + 0.5) * cellW + (Math.random() - 0.5) * 30,
+            y: (u.r + 0.5) * cellH + (Math.random() - 0.5) * 20,
+            life: 4.0
+          });
+        }
+      }
+
+      if ((u.type === 'pawn' || u.type === 'ice') && u.clock >= 1.0) {
+        const target = enemies.find(e => e.r === u.r && e.x > (u.c + 0.5) * cellW);
+        if (target) {
+          projectiles.push({
+            x: (u.c + 0.6) * cellW,
+            y: (u.r + 0.5) * cellH,
+            r: u.r,
+            damage: u.type === 'ice' ? 25 : 22,
+            isIce: u.type === 'ice',
+            speed: 400,
+            hit: false
+          });
+          u.clock = 0;
+        }
+      }
+
+      if (u.type === 'bishop' && u.clock >= 3.0) {
+        let maxRangeX = (u.c + 3.5) * cellW;
+        let minRangeX = (u.c + 0.5) * cellW;
+        const target = enemies.find(e => e.r === u.r && e.x >= minRangeX && e.x <= maxRangeX);
+        
+        if (target) {
+          u.clock = 0;
+          enemies.forEach(e => {
+            if (e.r === u.r && e.x >= minRangeX && e.x <= maxRangeX) {
+              e.hp -= 70;
+            }
+          });
+
+          for (let i = 0; i < 15; i++) {
+            particles.push({
+              x: (u.c + 0.6) * cellW,
+              y: (u.r + 0.5) * cellH,
+              vx: 150 + Math.random() * 200,
+              vy: (Math.random() - 0.5) * 80,
+              life: 0.3,
+              color: '#9b59b6'
+            });
+          }
+        }
+      }
+
+      let x = (u.c + 0.5) * cellW;
+      let y = (u.r + 0.5) * cellH;
+      let idleBob = Math.sin(animTime * 3 + u.c) * 2;
+      drawPiece(u.type, x, y + idleBob, cellH, u.scale, u.type === 'ice');
+
+      if (u.hp < u.maxHp) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(x - 15, y + cellH*0.3, 30, 4);
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(x - 15, y + cellH*0.3, Math.max(0, (u.hp / u.maxHp)) * 30, 4);
+      }
+    });
+
+    // 2. Render Projectiles
+    projectiles.forEach(p => {
+      p.x += p.speed * dt;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.isIce ? 6 : 5, 0, Math.PI * 2);
+      ctx.fillStyle = p.isIce ? '#00d2d3' : '#f1c40f';
+      ctx.fill();
+
+      const hitTarget = enemies.find(e => e.r === p.r && Math.abs(e.x - p.x) < 20);
+      if (hitTarget) {
+        hitTarget.hp -= p.damage;
+        p.hit = true;
+        if (p.isIce) hitTarget.slow = 2.4;
+        
+        for (let i = 0; i < 4; i++) {
+          particles.push({
+            x: p.x, y: p.y,
+            vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100,
+            life: 0.35, color: p.isIce ? '#00d2d3' : '#f39c12'
+          });
+        }
+      }
+    });
+    projectiles = projectiles.filter(p => !p.hit && p.x < canvas.width + 20);
+
+    // 3. Render Enemies
+    enemies.forEach(e => {
+      let speedMult = e.slow > 0 ? 0.45 : 1.0;
+      let targetUnit = units.find(u => u.r === e.r && Math.abs((u.c + 0.5) * cellW - e.x) < 25);
+
+      if (targetUnit) {
+        e.attackClock += dt;
+        if (e.attackClock > 0.6) {
+          targetUnit.hp -= e.isTough ? 25 : 15;
+          e.attackClock = 0;
+        }
+      } else {
+        e.x -= e.speed * speedMult * dt;
+      }
+
+      if (e.slow > 0) e.slow -= dt;
+      drawRobot(e, cellH);
+    });
+
+    enemies = enemies.filter(e => e.hp > 0);
+    units = units.filter(u => u.hp > 0);
+
+    // 4. Render Dropped Coins
+    for (let i = droppedCoins.length - 1; i >= 0; i--) {
+      let coin = droppedCoins[i];
+      coin.life -= dt;
+      if (coin.life <= 0) {
+        droppedCoins.splice(i, 1);
+      } else {
+        drawCoin(coin);
+      }
+    }
+
+    if (enemies.some(e => e.x < cellW * 0.2)) {
+      finishGame(false);
+      return;
+    }
+
+    // 5. Render Particles
+    particles.forEach(p => {
+      p.x += (p.vx || 0) * dt; p.y += (p.vy || 0) * dt;
+      p.life -= dt;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.life);
+      if (p.text) {
+        ctx.fillStyle = p.color; ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(p.text, p.x, p.y);
+      } else {
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    });
+    particles = particles.filter(p => p.life > 0);
+  }
+
+  function gameLoop(now) {
+    if (!active) return;
+    let dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    animTime += dt;
+
+    if (!paused) {
+      Object.keys(cooldownLeft).forEach(type => {
+        cooldownLeft[type] = Math.max(0, cooldownLeft[type] - dt);
+      });
+      updateCooldownDisplays();
+      waveTime += dt;
+      spawnTimer += dt;
+
+      let stg = stages[currentStage];
+      let currentWaveConfig = currentWave === 1 ? stg.w1 : stg.w2;
+
+      if (waveTime < WAVE_DURATION && spawnTimer >= nextSpawnInterval) {
+        spawnTimer = 0;
+        nextSpawnInterval = getRandomInterval(currentWaveConfig.minInt, currentWaveConfig.maxInt);
+        spawnEnemies(currentWaveConfig.count);
+      }
+
+      if (currentWave === 1 && waveTime >= WAVE_DURATION) {
+        currentWave = 2; waveTime = 0; spawnTimer = 0;
+        nextSpawnInterval = getRandomInterval(stg.w2.minInt, stg.w2.maxInt);
+        showWave2Banner();
+        say('Peringatan: Wave 2 telah dimulai!');
+      }
+
+      if (currentWave === 2 && waveTime >= WAVE_DURATION && enemies.length === 0) {
+        finishGame(true);
+        return;
+      }
+
+      let remainingTime = Math.max(0, Math.ceil(WAVE_DURATION - waveTime));
+      $('timer').textContent = `${remainingTime}s`;
+      $('wave-num').textContent = `WAVE ${currentWave}/2`;
+      $('stage-progress-txt').textContent = `WAVE ${currentWave} (${remainingTime}s)`;
+      
+      let totalProgress = ((currentWave - 1) * WAVE_DURATION + waveTime) / (WAVE_DURATION * 2);
+      $('bar').style.width = Math.min(100, (totalProgress * 100)) + '%';
+
+      updateAndRender(dt);
+    }
+
+    raf = requestAnimationFrame(gameLoop);
+  }
+
+  // --- SHOP BUY HANDLERS ---
+  $('buy-ice').onclick = () => {
+    if (unlockedItems.includes('ice')) return;
+    if (diamonds >= 60) {
+      diamonds -= 60;
+      unlockedItems.push('ice');
+      saveGameData();
+      updateDiamondDisplays();
+      alert('Selamat! Pion Es berhasil dibuka!');
+    }
+  };
+
+  $('buy-bishop').onclick = () => {
+    if (unlockedItems.includes('bishop')) return;
+    if (diamonds >= 20) {
+      diamonds -= 20;
+      unlockedItems.push('bishop');
+      saveGameData();
+      updateDiamondDisplays();
+      alert('Selamat! Bidak Bishop berhasil dibuka!');
+    }
+  };
+
+  document.querySelectorAll('.seed').forEach(b => {
+    b.onclick = () => {
+      if (!active || paused) return;
+      let type = b.dataset.type;
+      if ((type === 'ice' && !unlockedItems.includes('ice')) || (type === 'bishop' && !unlockedItems.includes('bishop'))) {
+        say('Bidak ini masih terkunci! Beli di Shop.');
+        return;
+      }
+      selected = type;
+      document.querySelectorAll('.seed').forEach(x => x.classList.toggle('active', x === b));
+      say('Bidak dipilih: ' + b.querySelector('b').textContent);
+    };
+  });
+
+  $('play').onclick = () => { updateDiamondDisplays(); renderStages(); showScreen('stages'); };
+  $('open-shop').onclick = () => { updateDiamondDisplays(); showScreen('shop'); };
+  $('shop-back').onclick = () => showScreen('lobby');
+  $('back').onclick = () => showScreen('lobby');
+  $('pause').onclick = () => {
+    paused = !paused;
+    $('pause').textContent = paused ? '▶ Lanjut' : 'Ⅱ Jeda';
+    say(paused ? 'Permainan dijeda.' : 'Pertahanan dilanjutkan.');
+  };
+  $('exit').onclick = () => { active = false; cancelAnimationFrame(raf); showScreen('stages'); };
+  $('retry').onclick = () => window.startGame(currentStage);
+  $('next').onclick = () => { if (currentStage < 3) window.startGame(currentStage + 1); };
+  $('home').onclick = () => { active = false; $('overlay').classList.remove('show'); showScreen('lobby'); };
+
+  // Listener cheat Instant Win [P]
+  window.addEventListener('keydown', (e) => {
+    if (active && !ended && (e.key === 'p' || e.key === 'P')) {
+      say('⚡ Cheat Diaktifkan: Kemenangan Instan!');
+      finishGame(true);
+    }
+  });
+
+  // --- RESET PROGRESS HANDLERS (SUDAH DIPERBAIKI) ---
+  $('open-reset').onclick = () => {
+    $('reset-overlay').style.display = 'flex';
+  };
+
+  $('cancel-reset').onclick = () => {
+    $('reset-overlay').style.display = 'none';
+  };
+
+  $('confirm-reset').onclick = () => {
+    localStorage.removeItem('chessVsRobotsDiamonds');
+    localStorage.removeItem('chessVsRobotsCompletedStages');
+    localStorage.removeItem('chessVsRobotsUnlockedItems');
+    
+    diamonds = 0;
+    unlockedItems = [];
+    completedStages = [];
+    unlocked = 1;
+    
+    saveGameData();
+    updateDiamondDisplays();
+    renderStages();
+    $('reset-overlay').style.display = 'none';
+    alert('Progres berhasil diatur ulang ke awal!');
+  };
+
+  updateDiamondDisplays();
+  updateCooldownDisplays();
+  renderStages();
+})();
+</script>
+</body>
+</html>
