@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Chess vs Robots</title>
+<title>Carots - Royal Defense</title>
 <style>
 :root {
   --gold: #f6c85f;
@@ -100,9 +100,9 @@ header {
 }
 
 .hero h1 {
-  font-size: clamp(34px, 6vw, 54px);
+  font-size: clamp(34px, 6vw, 64px);
   margin: 10px 0;
-  letter-spacing: 3px;
+  letter-spacing: 4px;
   background: linear-gradient(#fff9e8, #e9d79d 60%, #b8c8bf);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -351,7 +351,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 <main id="app">
   <header>
     <div>
-      <div class="brand">CHESS VS ROBOTS</div>
+      <div class="brand">Carots</div>
       <div class="muted">ROYAL DEFENSE • STRATEGY WARFARE</div>
     </div>
     <div class="pill">⚙ 5 × 10 BATTLEFIELD</div>
@@ -361,7 +361,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   <section id="lobby" class="screen active panel">
     <div class="hero">
       <div class="muted" style="letter-spacing: 3px; margin-bottom: 5px;">THE LAST KINGDOM</div>
-      <h1>CHESS VS ROBOTS</h1>
+      <h1>Carots</h1>
       <p style="max-width: 440px; color: #b0c4b4; font-size: 14px; line-height: 1.5; margin-bottom: 25px;">
         Bangun formasi pertahanan kerajaan, kumpulkan koin, dan tahan gelombang mesin penjajah di medan perang yang terus memanas.
       </p>
@@ -493,7 +493,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     </div>
   </section>
 
-  <!-- RESET CONFIRMATION MODAL (Diletakkan di tingkat terluar agar selalu bisa muncul) -->
+  <!-- RESET CONFIRMATION MODAL -->
   <div id="reset-overlay" style="position: fixed; inset: 0; background: rgba(5, 10, 7, 0.88); display: none; align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(8px); animation: fadeIn 0.3s;">
     <div class="modal" style="max-width: 400px; text-align: center;">
       <div style="font-size: 45px; margin-bottom: 10px;">⚠️</div>
@@ -516,6 +516,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   const ctx = canvas.getContext('2d');
   
   const WAVE_DURATION = 120;
+  const START_DELAY = 5; // Jeda 5 detik sebelum wave 1 dimulai
 
   const stages = [
     { name: 'A Fallen Kingdom', w1: { count: 1, minInt: 13, maxInt: 15 }, w2: { count: 2, minInt: 10, maxInt: 12 }, hpBase: 100, reward: 10 },
@@ -674,7 +675,6 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    // 1. Cek Klik Koin
     for (let i = droppedCoins.length - 1; i >= 0; i--) {
       let coin = droppedCoins[i];
       let dist = Math.hypot(clickX - coin.x, clickY - coin.y);
@@ -690,7 +690,6 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
       }
     }
 
-    // 2. Cek Penempatan Bidak di Grid
     let cellW = canvas.width / 10;
     let cellH = canvas.height / 5;
     let c = Math.floor(clickX / cellW);
@@ -759,14 +758,18 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     Object.keys(cooldownLeft).forEach(type => cooldownLeft[type] = 0);
     updateDiamondDisplays();
     updateCooldownDisplays();
-    currentWave = 1; waveTime = 0; spawnTimer = 0;
+    currentWave = 1; 
+    // Set waveTime negatif untuk jeda awal
+    waveTime = -START_DELAY; 
+    spawnTimer = 0;
     active = true; paused = false; ended = false; selected = 'pawn';
     
     let stg = stages[n];
+    // Interval spawn acak tetap disiapkan, tapi spawnTimer hanya bertambah jika waveTime > 0
     nextSpawnInterval = getRandomInterval(stg.w1.minInt, stg.w1.maxInt);
 
     $('stage-name').textContent = `Stage ${n+1}: ${stg.name}`;
-    $('stage-desc').textContent = `Invasi Robot Berlangsung`;
+    $('stage-desc').textContent = `Jeda Persiapan (Wave 1 dalam 5s)`;
     $('coins').textContent = coins;
     $('wave-num').textContent = `WAVE 1/2`;
     $('timer').textContent = `${WAVE_DURATION}s`;
@@ -777,11 +780,10 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     
     initBoard();
     showScreen('game');
-
     last = performance.now();
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(gameLoop);
-    say('Siapkan pertahanan caturmu! (Tekan [P] untuk instant win)');
+    say('Siapkan pertahanan caturmu!');
   };
 
   function spawnEnemies(count) {
@@ -968,6 +970,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
         }
       }
 
+      // Attack firing
       if ((u.type === 'pawn' || u.type === 'ice') && u.clock >= 1.0) {
         const target = enemies.find(e => e.r === u.r && e.x > (u.c + 0.5) * cellW);
         if (target) {
@@ -1116,35 +1119,58 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
       });
       updateCooldownDisplays();
       waveTime += dt;
-      spawnTimer += dt;
-
-      let stg = stages[currentStage];
-      let currentWaveConfig = currentWave === 1 ? stg.w1 : stg.w2;
-
-      if (waveTime < WAVE_DURATION && spawnTimer >= nextSpawnInterval) {
-        spawnTimer = 0;
-        nextSpawnInterval = getRandomInterval(currentWaveConfig.minInt, currentWaveConfig.maxInt);
-        spawnEnemies(currentWaveConfig.count);
-      }
-
-      if (currentWave === 1 && waveTime >= WAVE_DURATION) {
-        currentWave = 2; waveTime = 0; spawnTimer = 0;
-        nextSpawnInterval = getRandomInterval(stg.w2.minInt, stg.w2.maxInt);
-        showWave2Banner();
-        say('Peringatan: Wave 2 telah dimulai!');
-      }
-
-      if (currentWave === 2 && waveTime >= WAVE_DURATION && enemies.length === 0) {
-        finishGame(true);
-        return;
-      }
-
-      let remainingTime = Math.max(0, Math.ceil(WAVE_DURATION - waveTime));
-      $('timer').textContent = `${remainingTime}s`;
-      $('wave-num').textContent = `WAVE ${currentWave}/2`;
-      $('stage-progress-txt').textContent = `WAVE ${currentWave} (${remainingTime}s)`;
       
-      let totalProgress = ((currentWave - 1) * WAVE_DURATION + waveTime) / (WAVE_DURATION * 2);
+      // Update HUD & Logic berdasarkan waveTime
+      if (waveTime < 0) {
+        let prepRemaining = Math.ceil(-waveTime);
+        $('stage-desc').textContent = `Jeda Persiapan (Wave 1 dalam ${prepRemaining}s)`;
+        $('timer').textContent = `${WAVE_DURATION}s`;
+      } else {
+        // Logika Spawn Normal
+        if (currentWave === 1 && $('stage-desc').textContent.includes('Persiapan')) {
+           $('stage-desc').textContent = `Invasi Robot Berlangsung`;
+        }
+        
+        spawnTimer += dt;
+        let stg = stages[currentStage];
+        let currentWaveConfig = currentWave === 1 ? stg.w1 : stg.w2;
+
+        if (waveTime < WAVE_DURATION && spawnTimer >= nextSpawnInterval) {
+          spawnTimer = 0;
+          nextSpawnInterval = getRandomInterval(currentWaveConfig.minInt, currentWaveConfig.maxInt);
+          spawnEnemies(currentWaveConfig.count);
+        }
+
+        // Pergantian Wave
+        if (currentWave === 1 && waveTime >= WAVE_DURATION) {
+          currentWave = 2; waveTime = 0; spawnTimer = 0;
+          nextSpawnInterval = getRandomInterval(stg.w2.minInt, stg.w2.maxInt);
+          showWave2Banner();
+          say('Peringatan: Wave 2 telah dimulai!');
+        }
+
+        // Cek Kemenangan
+        if (currentWave === 2 && waveTime >= WAVE_DURATION && enemies.length === 0) {
+          finishGame(true);
+          return;
+        }
+
+        // Update Timer HUD
+        let remainingTime = Math.max(0, Math.ceil(WAVE_DURATION - waveTime));
+        $('timer').textContent = `${remainingTime}s`;
+      }
+
+      // HUD & Progress Bar tetap diupdate
+      $('wave-num').textContent = `WAVE ${currentWave}/2`;
+      let totalProgress;
+      if (waveTime < 0) {
+        totalProgress = 0;
+        $('stage-progress-txt').textContent = `PERSIAPAN`;
+      } else {
+        totalProgress = ((currentWave - 1) * WAVE_DURATION + waveTime) / (WAVE_DURATION * 2);
+        let remainingTime = Math.max(0, Math.ceil(WAVE_DURATION - waveTime));
+        $('stage-progress-txt').textContent = `WAVE ${currentWave} (${remainingTime}s)`;
+      }
       $('bar').style.width = Math.min(100, (totalProgress * 100)) + '%';
 
       updateAndRender(dt);
@@ -1153,66 +1179,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     raf = requestAnimationFrame(gameLoop);
   }
 
-  // --- SHOP BUY HANDLERS ---
-  $('buy-ice').onclick = () => {
-    if (unlockedItems.includes('ice')) return;
-    if (diamonds >= 60) {
-      diamonds -= 60;
-      unlockedItems.push('ice');
-      saveGameData();
-      updateDiamondDisplays();
-      alert('Selamat! Pion Es berhasil dibuka!');
-    }
-  };
-
-  $('buy-bishop').onclick = () => {
-    if (unlockedItems.includes('bishop')) return;
-    if (diamonds >= 20) {
-      diamonds -= 20;
-      unlockedItems.push('bishop');
-      saveGameData();
-      updateDiamondDisplays();
-      alert('Selamat! Bidak Bishop berhasil dibuka!');
-    }
-  };
-
-  document.querySelectorAll('.seed').forEach(b => {
-    b.onclick = () => {
-      if (!active || paused) return;
-      let type = b.dataset.type;
-      if ((type === 'ice' && !unlockedItems.includes('ice')) || (type === 'bishop' && !unlockedItems.includes('bishop'))) {
-        say('Bidak ini masih terkunci! Beli di Shop.');
-        return;
-      }
-      selected = type;
-      document.querySelectorAll('.seed').forEach(x => x.classList.toggle('active', x === b));
-      say('Bidak dipilih: ' + b.querySelector('b').textContent);
-    };
-  });
-
-  $('play').onclick = () => { updateDiamondDisplays(); renderStages(); showScreen('stages'); };
-  $('open-shop').onclick = () => { updateDiamondDisplays(); showScreen('shop'); };
-  $('shop-back').onclick = () => showScreen('lobby');
-  $('back').onclick = () => showScreen('lobby');
-  $('pause').onclick = () => {
-    paused = !paused;
-    $('pause').textContent = paused ? '▶ Lanjut' : 'Ⅱ Jeda';
-    say(paused ? 'Permainan dijeda.' : 'Pertahanan dilanjutkan.');
-  };
-  $('exit').onclick = () => { active = false; cancelAnimationFrame(raf); showScreen('stages'); };
-  $('retry').onclick = () => window.startGame(currentStage);
-  $('next').onclick = () => { if (currentStage < 3) window.startGame(currentStage + 1); };
-  $('home').onclick = () => { active = false; $('overlay').classList.remove('show'); showScreen('lobby'); };
-
-  // Listener cheat Instant Win [P]
-  window.addEventListener('keydown', (e) => {
-    if (active && !ended && (e.key === 'p' || e.key === 'P')) {
-      say('⚡ Cheat Diaktifkan: Kemenangan Instan!');
-      finishGame(true);
-    }
-  });
-
-  // --- RESET PROGRESS HANDLERS (SUDAH DIPERBAIKI) ---
+  // --- CONFIRMATION & RESET HANDLERS ---
   $('open-reset').onclick = () => {
     $('reset-overlay').style.display = 'flex';
   };
@@ -1237,6 +1204,72 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     $('reset-overlay').style.display = 'none';
     alert('Progres berhasil diatur ulang ke awal!');
   };
+
+  // --- SEED SELECTION ---
+  document.querySelectorAll('.seed').forEach(b => {
+    b.onclick = () => {
+      if (!active || paused) return;
+      let type = b.dataset.type;
+      if ((type === 'ice' && !unlockedItems.includes('ice')) || (type === 'bishop' && !unlockedItems.includes('bishop'))) {
+        say('Bidak ini masih terkunci! Beli di Shop.');
+        return;
+      }
+      selected = type;
+      document.querySelectorAll('.seed').forEach(x => x.classList.toggle('active', x === b));
+      say('Bidak dipilih: ' + b.querySelector('b').textContent);
+    };
+  });
+
+  // --- NAVIGATION ---
+  $('play').onclick = () => { updateDiamondDisplays(); renderStages(); showScreen('stages'); };
+  $('open-shop').onclick = () => { updateDiamondDisplays(); showScreen('shop'); };
+  $('shop-back').onclick = () => showScreen('lobby');
+  $('back').onclick = () => showScreen('lobby');
+  $('pause').onclick = () => {
+    paused = !paused;
+    $('pause').textContent = paused ? '▶ Lanjut' : 'Ⅱ Jeda';
+    say(paused ? 'Permainan dijeda.' : 'Pertahanan dilanjutkan.');
+  };
+  $('exit').onclick = () => { active = false; cancelAnimationFrame(raf); showScreen('stages'); };
+  $('retry').onclick = () => window.startGame(currentStage);
+  $('next').onclick = () => { if (currentStage < 3) window.startGame(currentStage + 1); };
+  $('home').onclick = () => { active = false; $('overlay').classList.remove('show'); showScreen('lobby'); };
+
+  
+  // Listener cheat Instant Win [P]
+  window.addEventListener('keydown', (e) => {
+    if (active && !ended && (e.key === 'p' || e.key === 'P')) {
+      say('⚡ Cheat Diaktifkan: Kemenangan Instan!');
+      finishGame(true);
+    }
+  });
+
+  
+  function buyItem(type, cost) {
+    if (unlockedItems.includes(type)) {
+      say('Item ini sudah kamu beli!');
+      return;
+    }
+    if (diamonds < cost) {
+      say('Diamond 💎 kamu kurang untuk membeli item ini!');
+      return;
+    }
+    diamonds -= cost;
+    unlockedItems.push(type);
+    saveGameData();
+    updateDiamondDisplays();
+    say(`Berhasil membeli ${type === 'ice' ? 'Pion Es' : 'Bishop'}!`);
+  }
+
+  const buyIceBtn = $('buy-ice');
+  if (buyIceBtn) {
+    buyIceBtn.onclick = () => buyItem('ice', 60);
+  }
+
+  const buyBishopBtn = $('buy-bishop');
+  if (buyBishopBtn) {
+    buyBishopBtn.onclick = () => buyItem('bishop', 20);
+  }
 
   updateDiamondDisplays();
   updateCooldownDisplays();
